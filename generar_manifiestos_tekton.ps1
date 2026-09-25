@@ -1,6 +1,5 @@
 param(
     [Parameter()]
-    [ValidateSet("dev", "prod", "production", "test")]
     [string]$Environment,
 
     [Parameter()]

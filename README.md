@@ -51,13 +51,13 @@ Puedes ejecutar el generador en cualquier máquina utilizando `curl` (Linux/macO
 ### 🪟 En Windows (PowerShell):
 ```powershell
 # Ejecución interactiva directa
-irm https://raw.githubusercontent.com/desarrolloESPOCH/kube-master/master/scripts_globales/generador_lineas_fabrica/generar_manifiestos_tekton.ps1 | iex
+irm https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.ps1 | iex
 ```
 
 ### 🐧 En Linux / macOS / Git Bash:
 ```bash
 # Ejecución interactiva directa
-bash <(curl -fsSL https://raw.githubusercontent.com/desarrolloESPOCH/kube-master/master/scripts_globales/generador_lineas_fabrica/generar_manifiestos_tekton.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.sh)
 ```
 
 ---
@@ -75,7 +75,7 @@ Para poder invocar el generador en cualquier momento desde tu terminal escribien
    ```powershell
    function gen-k8s {
        param([string]$Environment, [string]$AppName, [string]$GitRepoUrl, [string]$AppHost, [switch]$Yes)
-       irm https://raw.githubusercontent.com/desarrolloESPOCH/kube-master/master/scripts_globales/generador_lineas_fabrica/generar_manifiestos_tekton.ps1 | iex
+       irm https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.ps1 | iex
    }
    ```
 3. Recarga tu terminal:
@@ -90,7 +90,7 @@ Para poder invocar el generador en cualquier momento desde tu terminal escribien
    ```
 2. Agrega la siguiente línea al final:
    ```bash
-   alias gen-k8s='bash <(curl -fsSL https://raw.githubusercontent.com/desarrolloESPOCH/kube-master/master/scripts_globales/generador_lineas_fabrica/generar_manifiestos_tekton.sh)'
+   alias gen-k8s='bash <(curl -fsSL https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.sh)'
    ```
 3. Recarga tu terminal:
    ```bash
