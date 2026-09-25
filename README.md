@@ -74,8 +74,7 @@ Para poder invocar el generador en cualquier momento desde tu terminal escribien
 2. Agrega la siguiente función al final del archivo y guarda los cambios:
    ```powershell
    function gen-k8s {
-       param([string]$Environment, [string]$AppName, [string]$GitRepoUrl, [string]$AppHost, [switch]$Yes)
-       irm https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.ps1 | iex
+       & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Yariel03/gen-k8s/main/generar_manifiestos_tekton.ps1))) @args
    }
    ```
 3. Recarga tu terminal:

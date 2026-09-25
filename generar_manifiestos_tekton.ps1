@@ -1,6 +1,7 @@
 param(
     [Parameter()]
-    [string]$Environment,
+    [Alias("Environment", "Env", "e")]
+    [string]$DeployEnv,
 
     [Parameter()]
     [string]$AppName,
@@ -51,7 +52,7 @@ Write-Host "   GENERADOR DE MANIFIESTOS TEKTON + K8S (MULTI-ENTORNO)         " -
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 # 1. Seleccionar Entorno (dev / prod)
-if ([string]::IsNullOrWhiteSpace($Environment)) {
+if ([string]::IsNullOrWhiteSpace($DeployEnv)) {
     Write-Host ""
     Write-Host "Seleccione el entorno a desplegar:" -ForegroundColor Yellow
     Write-Host "  [1] dev / test (Desarrollo / Pruebas)" -ForegroundColor White
@@ -60,24 +61,24 @@ if ([string]::IsNullOrWhiteSpace($Environment)) {
     while ($true) {
         $opcion = (Read-Host "Ingrese opcion (1 o 2) [Por defecto: 1]").Trim()
         if ($opcion -eq "" -or $opcion -eq "1" -or $opcion.ToLower() -eq "dev" -or $opcion.ToLower() -eq "test") {
-            $Environment = "dev"
+            $DeployEnv = "dev"
             break
         } elseif ($opcion -eq "2" -or $opcion.ToLower() -eq "prod" -or $opcion.ToLower() -eq "production") {
-            $Environment = "prod"
+            $DeployEnv = "prod"
             break
         } else {
             Write-Host "Opcion invalida. Ingrese 1 para dev o 2 para prod." -ForegroundColor Yellow
         }
     }
 } else {
-    if ($Environment -eq "prod" -or $Environment -eq "production") {
-        $Environment = "prod"
+    if ($DeployEnv -eq "prod" -or $DeployEnv -eq "production") {
+        $DeployEnv = "prod"
     } else {
-        $Environment = "dev"
+        $DeployEnv = "dev"
     }
 }
 
-$isProd = ($Environment -eq "prod")
+$isProd = ($DeployEnv -eq "prod")
 if ($isProd) {
     $envLabel = "PRODUCCION (prod)"
 } else {
@@ -156,7 +157,7 @@ $RegistryHost = ($HarborImage -split "/")[0]
 # 7. Webhook Path por defecto según entorno
 if ([string]::IsNullOrWhiteSpace($WebhookPath)) {
     $cleanApp = $AppName.Replace("-", "")
-    $WebhookPath = "/listener${cleanApp}-${Environment}"
+    $WebhookPath = "/listener${cleanApp}-${DeployEnv}"
 }
 if (-not $WebhookPath.StartsWith("/")) {
     $WebhookPath = "/$WebhookPath"
@@ -214,7 +215,7 @@ if ($null -eq $SignImage) {
 
 # 11. Ruta del manifiesto deployment en el repo Git para Write-Back
 if ([string]::IsNullOrWhiteSpace($DeployManifestPath)) {
-    $DeployManifestPath = "k8s/${Environment}/deployment.yml"
+    $DeployManifestPath = "k8s/${DeployEnv}/deployment.yml"
 }
 
 # 12. Directorios de salida
@@ -232,18 +233,18 @@ if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
-    $OutputDir = Join-Path $WorkspaceRoot "kubernetes\manifests\${AppName}\${Environment}"
+    $OutputDir = Join-Path $WorkspaceRoot "kubernetes\manifests\${AppName}\${DeployEnv}"
 }
-$K8sAppDir = Join-Path $OutputDir "k8s\${Environment}"
+$K8sAppDir = Join-Path $OutputDir "k8s\${DeployEnv}"
 
 # Nombres normalizados para recursos K8s
 $ServiceAccountName = "tekton-triggers-admin"
 $RoleName           = "tekton-listener-role"
-$BindingName        = "${AppName}-${Environment}-binding"
-$TemplateName       = "${AppName}-${Environment}-template"
-$ListenerName       = "${AppName}-${Environment}-listener"
-$PipelineName       = "${AppName}-${Environment}-pipeline"
-$IngressName        = "${AppName}-${Environment}-webhook-ingress"
+$BindingName        = "${AppName}-${DeployEnv}-binding"
+$TemplateName       = "${AppName}-${DeployEnv}-template"
+$ListenerName       = "${AppName}-${DeployEnv}-listener"
+$PipelineName       = "${AppName}-${DeployEnv}-pipeline"
+$IngressName        = "${AppName}-${DeployEnv}-webhook-ingress"
 $ElServiceName      = "el-${ListenerName}"
 $CleanGitRepoUrl    = $GitRepoUrl -replace '^https?://', ''
 
@@ -276,7 +277,7 @@ Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Magenta
 Write-Host "   RESUMEN DE CONFIGURACION ($envLabel)" -ForegroundColor Magenta
 Write-Host "=================================================================" -ForegroundColor Magenta
-Write-Host "  - Entorno:             $Environment"
+Write-Host "  - Entorno:             $DeployEnv"
 Write-Host "  - App / Componente:    $AppName"
 Write-Host "  - Namespace K8s:       $sanitizedNamespace"
 Write-Host "  - Repositorio Git:     $GitRepoUrl"
@@ -405,7 +406,7 @@ spec:
   - apiVersion: tekton.dev/v1
     kind: PipelineRun
     metadata:
-      generateName: ${AppName}-${Environment}-run-
+      generateName: ${AppName}-${DeployEnv}-run-
       namespace: $sanitizedNamespace
     spec:
       params:
@@ -441,7 +442,7 @@ metadata:
 spec:
   serviceAccountName: $ServiceAccountName
   triggers:
-  - name: ${Environment}-push-trigger
+  - name: ${DeployEnv}-push-trigger
     interceptors:
     - ref:
         kind: ClusterInterceptor
@@ -716,7 +717,7 @@ spec:
               memory: "$AppMemLim"
 "@
 [System.IO.File]::WriteAllText((Join-Path $K8sAppDir "deployment.yml"), $fileAppDeployment.Trim(), [System.Text.Encoding]::UTF8)
-Write-Host "  [OK] Generado: k8s/${Environment}/deployment.yml" -ForegroundColor Green
+Write-Host "  [OK] Generado: k8s/${DeployEnv}/deployment.yml" -ForegroundColor Green
 
 # k8s/<entorno>/service.yml
 $fileAppService = @"
@@ -735,7 +736,7 @@ spec:
       targetPort: $ContainerPort
 "@
 [System.IO.File]::WriteAllText((Join-Path $K8sAppDir "service.yml"), $fileAppService.Trim(), [System.Text.Encoding]::UTF8)
-Write-Host "  [OK] Generado: k8s/${Environment}/service.yml" -ForegroundColor Green
+Write-Host "  [OK] Generado: k8s/${DeployEnv}/service.yml" -ForegroundColor Green
 
 # k8s/<entorno>/ingress.yml
 $fileAppIngress = @"
@@ -759,7 +760,7 @@ spec:
                   number: 80
 "@
 [System.IO.File]::WriteAllText((Join-Path $K8sAppDir "ingress.yml"), $fileAppIngress.Trim(), [System.Text.Encoding]::UTF8)
-Write-Host "  [OK] Generado: k8s/${Environment}/ingress.yml" -ForegroundColor Green
+Write-Host "  [OK] Generado: k8s/${DeployEnv}/ingress.yml" -ForegroundColor Green
 
 # k8s/<entorno>/hpa.yml
 $fileAppHpa = @"
@@ -784,7 +785,7 @@ spec:
           averageUtilization: 75
 "@
 [System.IO.File]::WriteAllText((Join-Path $K8sAppDir "hpa.yml"), $fileAppHpa.Trim(), [System.Text.Encoding]::UTF8)
-Write-Host "  [OK] Generado: k8s/${Environment}/hpa.yml" -ForegroundColor Green
+Write-Host "  [OK] Generado: k8s/${DeployEnv}/hpa.yml" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
@@ -809,12 +810,12 @@ Write-Host ""
 Write-Host "3. Aplicar los manifiestos de Tekton en el clúster (incluye RBAC + ClusterRoleBinding):" -ForegroundColor Gray
 Write-Host "   kubectl apply -f `"$OutputDir`"" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "4. Copiar la carpeta 'k8s/${Environment}' al repositorio de tu App ($GitRepoUrl) y hacer push:" -ForegroundColor Gray
+Write-Host "4. Copiar la carpeta 'k8s/${DeployEnv}' al repositorio de tu App ($GitRepoUrl) y hacer push:" -ForegroundColor Gray
 Write-Host "   git add k8s/ && git commit -m 'chore: add k8s manifests' && git push origin $GitBranch" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "5. Configurar Webhook en GitHub ($GitRepoUrl):" -ForegroundColor Gray
-Write-Host "   - Payload URL: https://${IngressHost}${WebhookPath}" -ForegroundColor Green
+Write-Host "   - Payload URL:  https://${IngressHost}${WebhookPath}" -ForegroundColor Green
 Write-Host "   - Content Type: application/json" -ForegroundColor Green
-Write-Host "   - Events: Just the push event (Rama: $GitBranch)" -ForegroundColor Green
+Write-Host "   - Events:       Just the push event (Rama: $GitBranch)" -ForegroundColor Green
 Write-Host ""
-Write-Host "6. Crear la Application en Argo CD apuntando al path: k8s/${Environment}" -ForegroundColor Gray
+Write-Host "6. Crear la Application en Argo CD apuntando al path: k8s/${DeployEnv}" -ForegroundColor Gray
